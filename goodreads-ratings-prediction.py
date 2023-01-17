@@ -71,7 +71,7 @@ print(df.publisher.value_counts())
 # %%
 print(df.loc[
         df.ratings_count == 0,
-        ['average_rating']
+        ["average_rating"]
     ].value_counts())
 
 # %%
@@ -85,7 +85,7 @@ print(df.shape)
 # %%
 print(df.loc[
         df.ratings_count == 0,
-        ['average_rating']
+        ["average_rating"]
     ].value_counts().head())
 
 # %%
@@ -95,3 +95,117 @@ df.ratings_count = df.ratings_count.map(lambda x: median_ratings_count if x == 0
 print(df.ratings_count.value_counts())
 
 # %%
+# check numerical features for outliers
+df["num_pages"] = df["  num_pages"]
+df.drop("  num_pages", axis=1, inplace=True)
+
+# %%
+df.num_pages.plot.box()
+
+# %%
+print(df.num_pages.quantile(q=[0.01, 0.95]))
+print(df.loc[df["num_pages"] < 25].shape)
+# exploring low page counts
+df.loc[df["num_pages"] < 25].num_pages.plot.box()
+
+# %%
+# removing books with num_pages < 25
+df = df[df["num_pages"] > 25]
+print(df.shape)
+
+# %%
+# checking books with high page count (99th percentile rounded to nearest tenth)
+print(df.loc[df["num_pages"] > 750].shape)
+# exploring low page counts
+df.loc[df["num_pages"] > 750].num_pages.plot.box()
+
+# %%
+# despite the high count and range, removing the top 5% num_pages
+df = df[df["num_pages"] <= 750]
+print(df.shape)
+df.num_pages.plot.box()
+
+# %%
+# convert publication_date to date dtype and extract features
+df["processed_date"] = pd.to_datetime(df["publication_date"])
+
+# %%
+# this fails the first time. checking and fixing the incorrect dates from the logs
+df.loc[df["publication_date"] == "11/31/2000", "publication_date"] = "11/30/2000"
+df.loc[df["publication_date"] == "6/31/1982", "publication_date"] = "6/30/1982"
+
+# %%
+# retrying the above
+df["processed_date"] = pd.to_datetime(df["publication_date"])
+print(df.head())
+
+# %%
+# extracting year and month of publication and dropping the original feature
+df["publication_year"] = df["processed_date"].dt.year
+df["publication_month"] = df["processed_date"].dt.month
+df.drop(["processed_date", "publication_date"], axis=1, inplace=True)
+print(df.head())
+
+# %%
+# fixing ratings_count's dtype
+df["ratings_count"] = df["ratings_count"].astype(int)
+print(df.head())
+
+# %%
+# extract features from title
+# removing extra parts from title (e.g. the sub-title after colon or brackets)
+def get_main_title(title):
+    main_title = title.split(":")
+    main_title = main_title[0]
+    main_title = main_title.split("(")
+    main_title = main_title[0]
+    return main_title
+
+df["main_title"] = df.title.apply(get_main_title)
+print(df.loc[:, ["title", "main_title"]])
+
+# %%
+# get (main) title length and word count
+df["title_length"] = df["main_title"].str.len()
+df["title_word_count"] = df["main_title"].apply(lambda x: len(x.split()))
+print(df.head())
+
+# %%
+# drop title and main_title
+df.drop(["main_title", "title"], axis=1, inplace=True)
+print(df.head())
+
+# %%
+# extract features from authors
+# extract total author count and the first author name
+def get_author_count(authors):
+    author_count = authors.split("/")
+    author_count = len(author_count)
+    return author_count
+
+def get_main_author(authors):
+    main_author = authors.split("/")
+    main_author = main_author[0]
+    return main_author
+
+# %%
+df["author_count"] = df.authors.apply(get_author_count)
+df["main_author"] = df.authors.apply(get_main_author)
+print(df.head())
+
+# %%
+# get main author's name length and word "count"
+df["main_author_name_length"] = df["main_author"].str.len()
+df["main_author_name_word_count"] = df["main_author"].apply(lambda x: len(x.split()))
+df["main_author_short_name_count"] = df["main_author"].str.count("\.")
+print(df.head())
+
+# %%
+# drop authors and main_author
+df.drop(["main_author", "authors"], axis=1, inplace=True)
+print(df.head())
+
+# %%
+# feature selection...
+# normalize num_pages, ratings_count, text_reviews_count
+# one-hot encode language_code, publisher (+authors?)
