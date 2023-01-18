@@ -1,5 +1,9 @@
 # %%
+import numpy as np
 import pandas as pd
+import plotly.figure_factory as ff
+
+from scipy.stats import zscore
 
 INPUT_FILE = "dataset/books.csv"
 
@@ -66,6 +70,8 @@ print(f"Out of {len(publisher_counts)} publishers, {len(small_publishers)} are \
 # %%
 # replace small publishers with "other" value
 df.publisher = df.publisher.map(lambda x: "other" if x in small_publishers else x)
+# removing spaces to help with feature engineering later
+df.publisher = df.publisher.map(lambda x: x.replace(" ", ""))
 print(df.publisher.value_counts())
 
 # %%
@@ -114,7 +120,7 @@ df = df[df["num_pages"] > 25]
 print(df.shape)
 
 # %%
-# checking books with high page count (99th percentile rounded to nearest tenth)
+# checking books with high page count (95th percentile rounded to nearest tenth)
 print(df.loc[df["num_pages"] > 750].shape)
 # exploring low page counts
 df.loc[df["num_pages"] > 750].num_pages.plot.box()
@@ -127,7 +133,7 @@ df.num_pages.plot.box()
 
 # %%
 # convert publication_date to date dtype and extract features
-df["processed_date"] = pd.to_datetime(df["publication_date"])
+# df["processed_date"] = pd.to_datetime(df["publication_date"])
 
 # %%
 # this fails the first time. checking and fixing the incorrect dates from the logs
@@ -206,6 +212,61 @@ df.drop(["main_author", "authors"], axis=1, inplace=True)
 print(df.head())
 
 # %%
-# feature selection...
-# normalize num_pages, ratings_count, text_reviews_count
-# one-hot encode language_code, publisher (+authors?)
+# feature selection
+# normalize numerical features
+features_to_normalize = ["isbn13", "ratings_count", "text_reviews_count", "num_pages",
+    "publication_year", "publication_month", "title_length", "title_word_count", "author_count",
+    "main_author_name_length", "main_author_name_word_count", "main_author_short_name_count"
+]
+
+for feature in features_to_normalize:
+    df[feature] = zscore(df[feature])
+
+print(df.head())
+
+# %%
+# one-hot encode categorical features
+df = pd.get_dummies(df)
+print(df.shape)
+print(df.head(1))
+
+# %%
+# print correlation matrix for the current dataframe
+correlation_to_target = df.corr()['average_rating'][1:]
+print(correlation_to_target)
+
+# %%
+# drop the features with |correlation| < 0.01
+low_correlation = correlation_to_target[(correlation_to_target < 0.01) & (correlation_to_target > -0.01)]
+df.drop(low_correlation.index.tolist(), axis=1, inplace=True)
+print(df.head())
+
+# %%
+# better correlation matrix to quickly visualize
+new_correlation_matrix = df.corr()
+data = np.array(new_correlation_matrix)
+fig = ff.create_annotated_heatmap(
+    data,
+    x = list(new_correlation_matrix.columns),
+    y = list(new_correlation_matrix.index),
+    annotation_text = np.around(data, decimals = 2),
+    hoverinfo = "z",
+    colorscale= "Viridis"
+)
+fig.show()
+
+# %%
+# creating the above functionality as function for ease of use
+def get_correlation_matrix_graph(correlation_matrix):
+    data = np.array(correlation_matrix)
+    fig = ff.create_annotated_heatmap(
+        data,
+        x = list(correlation_matrix.columns),
+        y = list(correlation_matrix.index),
+        annotation_text = np.around(data, decimals = 2),
+        hoverinfo = "z",
+        colorscale= "Viridis"
+    )
+    return fig
+
+# %%
