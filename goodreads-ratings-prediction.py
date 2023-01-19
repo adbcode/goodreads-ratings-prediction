@@ -3,11 +3,12 @@ import numpy as np
 import pandas as pd
 import plotly.figure_factory as ff
 
-from scipy.stats import zscore
+from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import RandomForestRegressor,AdaBoostRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score, mean_squared_error, max_error, explained_variance_score
+from sklearn.metrics import mean_squared_error, max_error, explained_variance_score
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.tree import DecisionTreeRegressor
 
 INPUT_FILE = "dataset/books.csv"
@@ -218,18 +219,6 @@ print(df.head())
 
 # %%
 # feature selection
-# normalize numerical features
-features_to_normalize = ["isbn13", "ratings_count", "text_reviews_count", "num_pages",
-    "publication_year", "publication_month", "title_length", "title_word_count", "author_count",
-    "main_author_name_length", "main_author_name_word_count", "main_author_short_name_count"
-]
-
-for feature in features_to_normalize:
-    df[feature] = zscore(df[feature])
-
-print(df.head())
-
-# %%
 # one-hot encode categorical features
 df = pd.get_dummies(df)
 print(df.shape)
@@ -291,19 +280,40 @@ get_correlation_matrix_graph(df.corr()).show()
 
 # %%
 # split data into train and test sets
-y = df["average_rating"]
-X = df.drop("average_rating", axis=1)
+def batch_regression_model_training(df, regressor_list, target_feature):
+    y = df[target_feature]
+    X = df.drop(target_feature, axis=1)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-print(f"Dataset split into {len(y_train)} train rows and {len(y_test)} test rows.")
+    # normalize dataset
+    scaler = MinMaxScaler()
+    X = pd.DataFrame(scaler.fit_transform(X.values), columns=X.columns, index=X.index)
+    # print(X.head())
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    print(f"Dataset split into {len(y_train)} train rows and {len(y_test)} test rows.")
+
+    # batch training
+    for regressor in regressor_list:
+        print(regressor)
+        regressor.fit(X_train, y_train)
+        y_pred = regressor.predict(X_test)
+        print(f"mean absolute error:\t\t{mean_squared_error(y_true = y_test, y_pred = y_pred)}")
+        print(f"max error:\t\t\t{max_error(y_true = y_test, y_pred = y_pred)}")
+        print(f"r2 score:\t\t\t{regressor.score(X_test, y_test)}")
+        print(f"explained variance score:\t{explained_variance_score(y_true = y_test, y_pred = y_pred)}")
 
 # %%
-regressor_list = [RandomForestRegressor(random_state=42), AdaBoostRegressor(random_state=42),
-    DecisionTreeRegressor(random_state=42), LinearRegression()
+# define the models to test
+regressor_list = [RandomForestRegressor(random_state = 42), AdaBoostRegressor(random_state = 42),
+    DecisionTreeRegressor(random_state = 42), LinearRegression(), DummyRegressor()
 ]
 
 # %%
-# TODO complete training batch
-for regressor in regressor_list:
-    regressor.fit(X_train, y_train)
-    y_predict = regressor.predict(X_test)
+# run the training
+batch_regression_model_training(df, regressor_list, "average_rating")
+
+# %%
+# run on original dataset to sanity check
+batch_regression_model_training(rawDF.select_dtypes(include=[np.number]), regressor_list, "average_rating")
+
+# %%
