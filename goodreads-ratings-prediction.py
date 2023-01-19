@@ -4,6 +4,11 @@ import pandas as pd
 import plotly.figure_factory as ff
 
 from scipy.stats import zscore
+from sklearn.ensemble import RandomForestRegressor,AdaBoostRegressor
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_squared_error, max_error, explained_variance_score
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeRegressor
 
 INPUT_FILE = "dataset/books.csv"
 
@@ -270,3 +275,35 @@ def get_correlation_matrix_graph(correlation_matrix):
     return fig
 
 # %%
+# remove publisher hot encodes for target correlation <= "other" encode
+# remove main_author_name_length as it has high correlation to main..._word_count
+# remove title_word_count because of title_length
+# remove text_reviews_count because of ratings_count
+redundant_features = ["text_reviews_count", "title_word_count", "main_author_name_length",
+    "publisher_BallantineBooks", "publisher_Bantam", "publisher_HarperPerennial",
+    "publisher_PenguinBooks", "publisher_PocketBooks", "publisher_Vintage"]
+
+df.drop(redundant_features, axis=1, inplace=True)
+print(df.head())
+get_correlation_matrix_graph(df.corr()).show()
+
+# we still have 3 features with low target correlation, but will keep it for now
+
+# %%
+# split data into train and test sets
+y = df["average_rating"]
+X = df.drop("average_rating", axis=1)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print(f"Dataset split into {len(y_train)} train rows and {len(y_test)} test rows.")
+
+# %%
+regressor_list = [RandomForestRegressor(random_state=42), AdaBoostRegressor(random_state=42),
+    DecisionTreeRegressor(random_state=42), LinearRegression()
+]
+
+# %%
+# TODO complete training batch
+for regressor in regressor_list:
+    regressor.fit(X_train, y_train)
+    y_predict = regressor.predict(X_test)
