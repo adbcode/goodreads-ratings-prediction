@@ -1,6 +1,7 @@
 # %%
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import plotly.figure_factory as ff
 
 from sklearn.dummy import DummyRegressor
@@ -277,6 +278,19 @@ print(df.head())
 get_correlation_matrix_graph(df.corr()).show()
 
 # we still have 3 features with low target correlation, but will keep it for now
+
+# %%
+# scatterplots of each feature with average_rating
+def get_scatterplot_wrt_target(df, target_feature, feature):
+    test = df[[feature, target_feature]].groupby([feature, target_feature]).value_counts().reset_index(name="count")
+    px.scatter(data_frame=test, x=feature, y=target_feature, color="count").show()
+
+def get_scatterplots_wrt_target_for_df(df, target_feature):
+    for feature in df.columns:
+        if feature != target_feature and feature in df.select_dtypes(include=[np.number]).columns:
+            get_scatterplot_wrt_target(df, target_feature, feature)
+
+get_scatterplots_wrt_target_for_df(df, "average_rating")
 
 # %%
 # split data into train and test sets
