@@ -46,40 +46,40 @@ objectColumns = df.select_dtypes(include=["object"]).columns
 for column in objectColumns:
     print(f"{column}: {sum(df[column].values == '')}")
 
-# %%
-# explore potentially categorical values
-language_code_counts = rawDF.language_code.value_counts()
-print(language_code_counts)
+# # %%
+# # explore potentially categorical values
+# language_code_counts = rawDF.language_code.value_counts()
+# print(language_code_counts)
 
-# %%
-print(df.loc[df.language_code.str.contains("-")].language_code.value_counts())
+# # %%
+# print(df.loc[df.language_code.str.contains("-")].language_code.value_counts())
 
-# %%
-rare_languages = language_code_counts.loc[
-        (language_code_counts < 50) &
-        ~(language_code_counts.index.str.contains("-"))
-    ].index.values.tolist()
-print(rare_languages)   # excluded eng-... variant, i.e. en-CA
+# # %%
+# rare_languages = language_code_counts.loc[
+#         (language_code_counts < 50) &
+#         ~(language_code_counts.index.str.contains("-"))
+#     ].index.values.tolist()
+# print(rare_languages)   # excluded eng-... variant, i.e. en-CA
 
-# %%
-# replace rare languages with "other" value
-df.language_code = df.language_code.map(lambda x: "other" if x in rare_languages else x)
-print(df.language_code.value_counts())
+# # %%
+# # replace rare languages with "other" value
+# df.language_code = df.language_code.map(lambda x: "other" if x in rare_languages else x)
+# print(df.language_code.value_counts())
 
-# %%
-publisher_counts = df.publisher.value_counts()
-print(publisher_counts)
+# # %%
+# publisher_counts = df.publisher.value_counts()
+# print(publisher_counts)
 
-# %%
-small_publishers = publisher_counts.loc[(publisher_counts < 100)].index.values.tolist()
-print(f"Out of {len(publisher_counts)} publishers, {len(small_publishers)} are \"small\".")
+# # %%
+# small_publishers = publisher_counts.loc[(publisher_counts < 100)].index.values.tolist()
+# print(f"Out of {len(publisher_counts)} publishers, {len(small_publishers)} are \"small\".")
 
-# %%
-# replace small publishers with "other" value
-df.publisher = df.publisher.map(lambda x: "other" if x in small_publishers else x)
+# # %%
+# # replace small publishers with "other" value
+# df.publisher = df.publisher.map(lambda x: "other" if x in small_publishers else x)
 # removing spaces to help with feature engineering later
 df.publisher = df.publisher.map(lambda x: x.replace(" ", ""))
-print(df.publisher.value_counts())
+# print(df.publisher.value_counts())
 
 # %%
 print(df.loc[
@@ -121,22 +121,22 @@ print(df.loc[df["num_pages"] < 25].shape)
 # exploring low page counts
 df.loc[df["num_pages"] < 25].num_pages.plot.box()
 
-# %%
-# removing books with num_pages < 25
-df = df[df["num_pages"] > 25]
-print(df.shape)
+# # %%
+# # removing books with num_pages < 25
+# df = df[df["num_pages"] > 25]
+# print(df.shape)
 
-# %%
-# checking books with high page count (95th percentile rounded to nearest tenth)
-print(df.loc[df["num_pages"] > 750].shape)
-# exploring low page counts
-df.loc[df["num_pages"] > 750].num_pages.plot.box()
+# # %%
+# # checking books with high page count (95th percentile rounded to nearest tenth)
+# print(df.loc[df["num_pages"] > 750].shape)
+# # exploring low page counts
+# df.loc[df["num_pages"] > 750].num_pages.plot.box()
 
-# %%
-# despite the high count and range, removing the top 5% num_pages
-df = df[df["num_pages"] <= 750]
-print(df.shape)
-df.num_pages.plot.box()
+# # %%
+# # despite the high count and range, removing the top 5% num_pages
+# df = df[df["num_pages"] <= 750]
+# print(df.shape)
+# df.num_pages.plot.box()
 
 # %%
 # convert publication_date to date dtype and extract features
@@ -164,37 +164,37 @@ print(df.head())
 df["ratings_count"] = df["ratings_count"].astype(int)
 print(df.head())
 
-# %%
-# extract features from title
-# removing extra parts from title (e.g. the sub-title after colon or brackets)
-def get_main_title(title):
-    main_title = title.split(":")
-    main_title = main_title[0]
-    main_title = main_title.split("(")
-    main_title = main_title[0]
-    return main_title
+# # %%
+# # extract features from title
+# # removing extra parts from title (e.g. the sub-title after colon or brackets)
+# def get_main_title(title):
+#     main_title = title.split(":")
+#     main_title = main_title[0]
+#     main_title = main_title.split("(")
+#     main_title = main_title[0]
+#     return main_title
 
-df["main_title"] = df.title.apply(get_main_title)
-print(df.loc[:, ["title", "main_title"]])
+# df["main_title"] = df.title.apply(get_main_title)
+# print(df.loc[:, ["title", "main_title"]])
+
+# # %%
+# # get (main) title length and word count
+# df["title_length"] = df["main_title"].str.len()
+# df["title_word_count"] = df["main_title"].apply(lambda x: len(x.split()))
+# print(df.head())
 
 # %%
-# get (main) title length and word count
-df["title_length"] = df["main_title"].str.len()
-df["title_word_count"] = df["main_title"].apply(lambda x: len(x.split()))
+# drop title (and main_title)
+df.drop(["title"], axis=1, inplace=True) #df.drop(["main_title", "title"], axis=1, inplace=True)
 print(df.head())
 
-# %%
-# drop title and main_title
-df.drop(["main_title", "title"], axis=1, inplace=True)
-print(df.head())
-
-# %%
-# extract features from authors
-# extract total author count and the first author name
-def get_author_count(authors):
-    author_count = authors.split("/")
-    author_count = len(author_count)
-    return author_count
+# # %%
+# # extract features from authors
+# # extract total author count and the first author name
+# def get_author_count(authors):
+#     author_count = authors.split("/")
+#     author_count = len(author_count)
+#     return author_count
 
 def get_main_author(authors):
     main_author = authors.split("/")
@@ -202,28 +202,61 @@ def get_main_author(authors):
     return main_author
 
 # %%
-df["author_count"] = df.authors.apply(get_author_count)
+# df["author_count"] = df.authors.apply(get_author_count)
 df["main_author"] = df.authors.apply(get_main_author)
 print(df.head())
 
+# # %%
+# # get main author's name length and word "count"
+# df["main_author_name_length"] = df["main_author"].str.len()
+# df["main_author_name_word_count"] = df["main_author"].apply(lambda x: len(x.split()))
+# df["main_author_short_name_count"] = df["main_author"].str.count("\.")
+# print(df.head())
+
 # %%
-# get main author's name length and word "count"
-df["main_author_name_length"] = df["main_author"].str.len()
-df["main_author_name_word_count"] = df["main_author"].apply(lambda x: len(x.split()))
-df["main_author_short_name_count"] = df["main_author"].str.count("\.")
-print(df.head())
+# fix 0-page books to prevent calculation issues
+df["num_pages"] = df.num_pages.apply(lambda x: 1 if x == 0 else x)
+# generate features using existing numerical ones
+df["text_reviews_ratio"] = df["text_reviews_count"] / df["ratings_count"]
+df["text_reviews_count_per_page"] = df["text_reviews_count"] / df["num_pages"]
+df["ratings_count_per_page"] = df["ratings_count"] / df["num_pages"]
+# artificial attributes that might help
+df["ratings_count_times_text_reviews_count"] = df["text_reviews_count"] * df["ratings_count"]
+df["text_reviews_count_times_num_pages"] = df["text_reviews_count"] * df["num_pages"]
+df["ratings_count_times_num_pages"] = df["ratings_count"] * df["num_pages"]
+df["ratings_count_times_text_reviews_count_times_num_pages"] = df["text_reviews_count"] * df["ratings_count"] * df["num_pages"]
+
+# %%
+# categorical label-level aggregation features
+
+main_author_mean = df.groupby("main_author").mean()
+main_author_count = df.groupby("main_author").count()
+publisher_count = df.groupby("publisher").count()
+publication_year_sum = df.groupby("publication_year").sum()
+publication_month_sum = df.groupby("publication_month").sum()
+
+df["english_book"] = df.language_code.apply(lambda x: 1 if x.startswith("eng") else 0)
+df["main_author_book_count"] = df.main_author.apply(lambda x: main_author_count["isbn13"][x])
+df["main_author_average_text_reviews_count"] = df.main_author.apply(lambda x: main_author_mean["ratings_count"][x])
+df["main_author_average_text_reviews_count"] = df.main_author.apply(lambda x: main_author_mean["text_reviews_count"][x])
+df["publisher_count"] = df.publisher.apply(lambda x: publisher_count["isbn13"][x])
+df["publication_year_ratings_count"] = df.publication_year.apply(lambda x: publication_year_sum["ratings_count"][x])
+df["publication_year_text_reviews_count"] = df.publication_year.apply(lambda x: publication_year_sum["text_reviews_count"][x])
+df["publication_month_ratings_count"] = df.publication_month.apply(lambda x: publication_month_sum["ratings_count"][x])
+df["publication_month_text_reviews_count"] = df.publication_month.apply(lambda x: publication_month_sum["text_reviews_count"][x])
 
 # %%
 # drop authors and main_author
 df.drop(["main_author", "authors"], axis=1, inplace=True)
+df.drop(["publisher", "language_code"], axis=1, inplace=True)
 print(df.head())
 
-# %%
-# feature selection
-# one-hot encode categorical features
-df = pd.get_dummies(df)
-print(df.shape)
-print(df.head(1))
+# # %%
+# # feature selection
+# # one-hot encode categorical features
+# df = pd.get_dummies(df)
+# print(df.shape)
+# print(df.head(1))
 
 # %%
 # print correlation matrix for the current dataframe
@@ -238,20 +271,6 @@ print(df.head())
 
 # %%
 # better correlation matrix to quickly visualize
-new_correlation_matrix = df.corr()
-data = np.array(new_correlation_matrix)
-fig = ff.create_annotated_heatmap(
-    data,
-    x = list(new_correlation_matrix.columns),
-    y = list(new_correlation_matrix.index),
-    annotation_text = np.around(data, decimals = 2),
-    hoverinfo = "z",
-    colorscale= "Viridis"
-)
-fig.show()
-
-# %%
-# creating the above functionality as function for ease of use
 def get_correlation_matrix_graph(correlation_matrix):
     data = np.array(correlation_matrix)
     fig = ff.create_annotated_heatmap(
@@ -264,20 +283,25 @@ def get_correlation_matrix_graph(correlation_matrix):
     )
     return fig
 
+get_correlation_matrix_graph(df.corr())
+
 # %%
-# remove publisher hot encodes for target correlation <= "other" encode
-# remove main_author_name_length as it has high correlation to main..._word_count
-# remove title_word_count because of title_length
-# remove text_reviews_count because of ratings_count
-redundant_features = ["text_reviews_count", "title_word_count", "main_author_name_length",
-    "publisher_BallantineBooks", "publisher_Bantam", "publisher_HarperPerennial",
-    "publisher_PenguinBooks", "publisher_PocketBooks", "publisher_Vintage"]
+# # remove publisher hot encodes for target correlation <= "other" encode
+# # remove main_author_name_length as it has high correlation to main..._word_count
+# # remove title_word_count because of title_length
+# # remove text_reviews_count because of ratings_count
+# redundant_features = ["text_reviews_count", "title_word_count", "main_author_name_length",
+#     "publisher_BallantineBooks", "publisher_Bantam", "publisher_HarperPerennial",
+#     "publisher_PenguinBooks", "publisher_PocketBooks", "publisher_Vintage"]
 
-df.drop(redundant_features, axis=1, inplace=True)
-print(df.head())
-get_correlation_matrix_graph(df.corr()).show()
+# redundant_features = ["ratings_count_times_text_reviews_count", "text_reviews_count",
+#     "text_reviews_count_per_page", "ratings_count_per_page",
+#     "ratings_count_times_text_reviews_count_times_num_pages", "main_author_average_text_reviews_count",
+#     "publication_year_ratings_count", "ratings_count_times_num_pages"]
 
-# we still have 3 features with low target correlation, but will keep it for now
+# df.drop(redundant_features, axis=1, inplace=True)
+# print(df.head())
+# get_correlation_matrix_graph(df.corr()).show()
 
 # %%
 # scatterplots of each feature with average_rating
@@ -299,8 +323,8 @@ def batch_regression_model_training(df, regressor_list, target_feature):
     X = df.drop(target_feature, axis=1)
 
     # normalize dataset
-    scaler = MinMaxScaler()
-    X = pd.DataFrame(scaler.fit_transform(X.values), columns=X.columns, index=X.index)
+    # scaler = MinMaxScaler()
+    # X = pd.DataFrame(scaler.fit_transform(X.values), columns=X.columns, index=X.index)
     # print(X.head())
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -329,5 +353,3 @@ batch_regression_model_training(df, regressor_list, "average_rating")
 # %%
 # run on original dataset to sanity check
 batch_regression_model_training(rawDF.select_dtypes(include=[np.number]), regressor_list, "average_rating")
-
-# %%
