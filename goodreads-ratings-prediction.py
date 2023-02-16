@@ -8,7 +8,7 @@ from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import RandomForestRegressor,AdaBoostRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, max_error, explained_variance_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.tree import DecisionTreeRegressor
 
@@ -324,15 +324,22 @@ def get_scatterplots_wrt_target_for_df(df, target_feature):
 get_scatterplots_wrt_target_for_df(df, "average_rating")
 
 # %%
-# split data into train and test sets
+# functions to perform training and scoring in batch
+
+def score_model(regressor, y_test, y_pred, X_test):
+    print(f"mean absolute error:\t\t{mean_squared_error(y_true = y_test, y_pred = y_pred)}")
+    print(f"max error:\t\t\t{max_error(y_true = y_test, y_pred = y_pred)}")
+    print(f"r2 score:\t\t\t{regressor.score(X_test, y_test)}")
+    print(f"explained variance score:\t{explained_variance_score(y_true = y_test, y_pred = y_pred)}")
+
 def batch_regression_model_training(df, regressor_list, target_feature):
     y = df[target_feature]
     X = df.drop(target_feature, axis=1)
 
-    # normalize dataset
+    # # normalize dataset
     # scaler = MinMaxScaler()
     # X = pd.DataFrame(scaler.fit_transform(X.values), columns=X.columns, index=X.index)
-    # print(X.head())
+    # # print(X.head())
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     print(f"Dataset split into {len(y_train)} train rows and {len(y_test)} test rows.")
@@ -342,10 +349,7 @@ def batch_regression_model_training(df, regressor_list, target_feature):
         print(regressor)
         regressor.fit(X_train, y_train)
         y_pred = regressor.predict(X_test)
-        print(f"mean absolute error:\t\t{mean_squared_error(y_true = y_test, y_pred = y_pred)}")
-        print(f"max error:\t\t\t{max_error(y_true = y_test, y_pred = y_pred)}")
-        print(f"r2 score:\t\t\t{regressor.score(X_test, y_test)}")
-        print(f"explained variance score:\t{explained_variance_score(y_true = y_test, y_pred = y_pred)}")
+        score_model(regressor, y_test, y_pred, X_test)
 
 # %%
 # define the models to test
@@ -360,3 +364,83 @@ batch_regression_model_training(df, regressor_list, "average_rating")
 # %%
 # run on original dataset to sanity check
 batch_regression_model_training(rawDF.select_dtypes(include=[np.number]), regressor_list, "average_rating")
+
+# %%
+# Hyperparameter of RandomForestRegressor
+# Number of trees in random forest
+n_estimators = [int(x) for x in np.linspace(start = 10, stop = 200, num = 19)]
+# Number of features to consider at every split
+max_features = ['auto', 'sqrt', 2, 3, 4]
+# Maximum number of levels in tree
+max_depth = [int(x) for x in np.linspace(3, 20, num = 17)]
+max_depth.append(None)
+# Minimum number of samples required to split a node
+min_samples_split = [int(x) for x in np.linspace(2, 15, num = 13)]
+# Minimum number of samples required at each leaf node
+min_samples_leaf = [int(x) for x in np.linspace(2, 20, num = 9)]
+# Method of selecting samples for training each tree
+bootstrap = [True, False]
+# Create the random grid
+random_grid = {'n_estimators': n_estimators,
+               'max_features': max_features,
+               'max_depth': max_depth,
+               'min_samples_split': min_samples_split,
+               'min_samples_leaf': min_samples_leaf,
+               'bootstrap': bootstrap}
+
+# %%
+rf_tuner = RandomizedSearchCV(estimator = regressor_list[0],
+    param_distributions=random_grid, n_iter=100, cv=2,
+    scoring="r2", return_train_score=True,
+    verbose=2, random_state=42, n_jobs=-1)
+
+y = df["average_rating"]
+X = df.drop("average_rating", axis=1)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+rf_tuner.fit(X_train, y_train)
+
+print(rf_tuner.best_params_)
+
+# %%
+tuned_rf = rf_tuner.best_estimator_
+y_pred = tuned_rf.predict(X_test)
+score_model(tuned_rf, y_test, y_pred, X_test)
+
+# %%
+# sanity check with the "stock" model
+stock_rf = regressor_list[0]
+stock_rf.fit(X_train, y_train)
+y_pred = stock_rf.predict(X_test)
+score_model(stock_rf, y_test, y_pred, X_test)
+
+# %%
+# compare prediction by reducing precision
+
+# baseline
+print(f"baseline\t{np.sum(y_pred == y_test)}\t{round(np.sum(y_pred == y_test)*100/len(y_pred), 1)}%")
+
+# to nearest tenth
+y_test_tenth = np.array([round(x, 1) for x in y_test])
+y_pred_tenth = np.array([round(x, 1) for x in y_pred])
+print(f"tenth\t\t{np.sum(y_pred_tenth == y_test_tenth)}\t{round(np.sum(y_pred_tenth == y_test_tenth)*100/len(y_pred_tenth), 1)}%")
+
+# to nearest number
+y_test_whole = np.array([round(x) for x in y_test])
+y_pred_whole = np.array([round(x) for x in y_pred])
+print(f"number\t\t{np.sum(y_test_whole == y_pred_whole)}\t{round(np.sum(y_test_whole == y_pred_whole)*100/len(y_pred_whole),1)}%")
+
+# to nearest half
+y_test_half = np.array([round(x * 2) / 2 for x in y_test])
+y_pred_half = np.array([round(x * 2) / 2 for x in y_pred])
+print(f"half\t\t{np.sum(y_test_half == y_pred_half)}\t{round(np.sum(y_test_half == y_pred_half)*100/len(y_pred_half), 1)}%")
+
+# %%
+# scores prediction visually
+# baseline
+px.scatter(x=y_test, y=y_pred, range_x=[0,5.1], range_y=[0,5.1], labels={'x':'real', 'y':'predicted'}, trendline="ols").show()
+
+# %%
+# whole numbers
+px.scatter(x=y_test_whole, y=y_pred_whole, range_x=[0,5.1], range_y=[0,5.1], labels={'x':'real', 'y':'predicted'}).show()
+
+# %%
