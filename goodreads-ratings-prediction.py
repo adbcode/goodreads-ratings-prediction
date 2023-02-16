@@ -48,38 +48,9 @@ for column in objectColumns:
 
 # # %%
 # # explore potentially categorical values
-# language_code_counts = rawDF.language_code.value_counts()
-# print(language_code_counts)
 
 # # %%
 # print(df.loc[df.language_code.str.contains("-")].language_code.value_counts())
-
-# # %%
-# rare_languages = language_code_counts.loc[
-#         (language_code_counts < 50) &
-#         ~(language_code_counts.index.str.contains("-"))
-#     ].index.values.tolist()
-# print(rare_languages)   # excluded eng-... variant, i.e. en-CA
-
-# # %%
-# # replace rare languages with "other" value
-# df.language_code = df.language_code.map(lambda x: "other" if x in rare_languages else x)
-# print(df.language_code.value_counts())
-
-# # %%
-# publisher_counts = df.publisher.value_counts()
-# print(publisher_counts)
-
-# # %%
-# small_publishers = publisher_counts.loc[(publisher_counts < 100)].index.values.tolist()
-# print(f"Out of {len(publisher_counts)} publishers, {len(small_publishers)} are \"small\".")
-
-# # %%
-# # replace small publishers with "other" value
-# df.publisher = df.publisher.map(lambda x: "other" if x in small_publishers else x)
-# removing spaces to help with feature engineering later
-df.publisher = df.publisher.map(lambda x: x.replace(" ", ""))
-# print(df.publisher.value_counts())
 
 # %%
 print(df.loc[
@@ -164,37 +135,37 @@ print(df.head())
 df["ratings_count"] = df["ratings_count"].astype(int)
 print(df.head())
 
-# # %%
-# # extract features from title
-# # removing extra parts from title (e.g. the sub-title after colon or brackets)
-# def get_main_title(title):
-#     main_title = title.split(":")
-#     main_title = main_title[0]
-#     main_title = main_title.split("(")
-#     main_title = main_title[0]
-#     return main_title
+# %%
+# extract features from title
+# removing extra parts from title (e.g. the sub-title after colon or brackets)
+def get_main_title(title):
+    main_title = title.split(":")
+    main_title = main_title[0]
+    main_title = main_title.split("(")
+    main_title = main_title[0]
+    return main_title
 
-# df["main_title"] = df.title.apply(get_main_title)
-# print(df.loc[:, ["title", "main_title"]])
+df["main_title"] = df.title.apply(get_main_title)
+print(df.loc[:, ["title", "main_title"]])
 
-# # %%
-# # get (main) title length and word count
-# df["title_length"] = df["main_title"].str.len()
-# df["title_word_count"] = df["main_title"].apply(lambda x: len(x.split()))
-# print(df.head())
+# %%
+# get (main) title length and word count
+df["title_length"] = df["main_title"].str.len()
+df["title_word_count"] = df["main_title"].apply(lambda x: len(x.split()))
+print(df.head())
 
 # %%
 # drop title (and main_title)
 df.drop(["title"], axis=1, inplace=True) #df.drop(["main_title", "title"], axis=1, inplace=True)
 print(df.head())
 
-# # %%
-# # extract features from authors
-# # extract total author count and the first author name
-# def get_author_count(authors):
-#     author_count = authors.split("/")
-#     author_count = len(author_count)
-#     return author_count
+# %%
+# extract features from authors
+# extract total author count and the first author name
+def get_author_count(authors):
+    author_count = authors.split("/")
+    author_count = len(author_count)
+    return author_count
 
 def get_main_author(authors):
     main_author = authors.split("/")
@@ -202,16 +173,16 @@ def get_main_author(authors):
     return main_author
 
 # %%
-# df["author_count"] = df.authors.apply(get_author_count)
+df["author_count"] = df.authors.apply(get_author_count)
 df["main_author"] = df.authors.apply(get_main_author)
 print(df.head())
 
-# # %%
-# # get main author's name length and word "count"
-# df["main_author_name_length"] = df["main_author"].str.len()
-# df["main_author_name_word_count"] = df["main_author"].apply(lambda x: len(x.split()))
-# df["main_author_short_name_count"] = df["main_author"].str.count("\.")
-# print(df.head())
+# %%
+# get main author's name length and word "count"
+df["main_author_name_length"] = df["main_author"].str.len()
+df["main_author_name_word_count"] = df["main_author"].apply(lambda x: len(x.split()))
+df["main_author_short_name_count"] = df["main_author"].str.count("\.")
+print(df.head())
 
 # %%
 # fix 0-page books to prevent calculation issues
@@ -246,17 +217,47 @@ df["publication_month_ratings_count"] = df.publication_month.apply(lambda x: pub
 df["publication_month_text_reviews_count"] = df.publication_month.apply(lambda x: publication_month_sum["text_reviews_count"][x])
 
 # %%
+publisher_counts = df.publisher.value_counts()
+print(publisher_counts)
+
+# %%
+small_publishers = publisher_counts.loc[(publisher_counts < 100)].index.values.tolist()
+print(f"Out of {len(publisher_counts)} publishers, {len(small_publishers)} are \"small\".")
+
+# %%
+# replace small publishers with "other" value
+df.publisher = df.publisher.map(lambda x: "other" if x in small_publishers else x)
+# removing spaces to help with feature engineering later
+df.publisher = df.publisher.map(lambda x: x.replace(" ", ""))
+print(df.publisher.value_counts())
+
+# %%
+language_code_counts = rawDF.language_code.value_counts()
+print(language_code_counts)
+rare_languages = language_code_counts.loc[
+        (language_code_counts < 50) &
+        ~(language_code_counts.index.str.contains("-"))
+    ].index.values.tolist()
+print(rare_languages)   # excluded eng-... variant, i.e. en-CA
+
+# %%
+# replace rare languages with "other" value
+df.language_code = df.language_code.map(lambda x: "other" if x in rare_languages else x)
+print(df.language_code.value_counts())
+
+# %%
 # drop authors and main_author
 df.drop(["main_author", "authors"], axis=1, inplace=True)
-df.drop(["publisher", "language_code"], axis=1, inplace=True)
+# df.drop(["publisher", "language_code"], axis=1, inplace=True)
+df.drop(["main_title"], axis=1, inplace=True)
 print(df.head())
 
-# # %%
-# # feature selection
-# # one-hot encode categorical features
-# df = pd.get_dummies(df)
-# print(df.shape)
-# print(df.head(1))
+# %%
+# feature selection
+# one-hot encode categorical features
+df = pd.get_dummies(df)
+print(df.shape)
+print(df.head(1))
 
 # %%
 # print correlation matrix for the current dataframe
@@ -284,6 +285,12 @@ def get_correlation_matrix_graph(correlation_matrix):
     return fig
 
 get_correlation_matrix_graph(df.corr())
+
+# %%
+# new synthetic features
+df["mean_title_word_length"] = df["title_length"] / df["title_word_count"]
+df["publisher_PenguinBooks_times_count"] = df["publisher_count"] * df["publisher_Vintage"]
+df["publisher_Vintage_times_count"] = df["publisher_Vintage"] * df["publisher_count"]
 
 # %%
 # # remove publisher hot encodes for target correlation <= "other" encode
