@@ -17,7 +17,7 @@ Standard Book Number.
 9) **ratings_count**: The total number of ratings the book received.
 10) **text_reviews_count**: The total number of written text reviews the book received.
 11) **publication_date**: The date the book was published.
-12) **publisher**: The name of the book publisher
+12) **publisher**: The name of the book publisher.
 
 In this project we test the hypothesis that we can predict the *average_rating* value from the other metadata. We treat this as a regression problem and hence test the following set of models:
 - Random Forest
@@ -31,7 +31,7 @@ Given the unbalanced nature of the dataset and its inherent bias, the measure of
 - **~66%** accuracy for predicting the nearest half.
 - ...
 - **~0.17** R<sup>2</sup> score for the best regression model.
-    - without any feature engineering results in ~0.13
+    - without any feature engineering results in ~0.13.
 
 As majority of the data is centered around 3 and 4, a dummy model can achieve good results if we reduce the precision for this dataset.
 

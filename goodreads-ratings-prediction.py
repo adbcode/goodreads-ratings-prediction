@@ -14,6 +14,8 @@ from sklearn.tree import DecisionTreeRegressor
 
 INPUT_FILE = "dataset/books.csv"
 
+np.random.seed(42)
+
 # %%
 # Encoding determined by opening file in a text editor
 with open(INPUT_FILE, "r", encoding='utf-8') as inputFile:
@@ -321,7 +323,7 @@ def get_scatterplots_wrt_target_for_df(df, target_feature):
         if feature != target_feature and feature in df.select_dtypes(include=[np.number]).columns:
             get_scatterplot_wrt_target(df, target_feature, feature)
 
-get_scatterplots_wrt_target_for_df(df, "average_rating")
+# get_scatterplots_wrt_target_for_df(df, "average_rating")
 
 # %%
 # functions to perform training and scoring in batch
@@ -397,14 +399,14 @@ rf_tuner = RandomizedSearchCV(estimator = regressor_list[0],
 y = df["average_rating"]
 X = df.drop("average_rating", axis=1)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-rf_tuner.fit(X_train, y_train)
+# rf_tuner.fit(X_train, y_train)
 
-print(rf_tuner.best_params_)
+# print(rf_tuner.best_params_)
 
-# %%
-tuned_rf = rf_tuner.best_estimator_
-y_pred = tuned_rf.predict(X_test)
-score_model(tuned_rf, y_test, y_pred, X_test)
+# # %%
+# tuned_rf = rf_tuner.best_estimator_
+# y_pred = tuned_rf.predict(X_test)
+# score_model(tuned_rf, y_test, y_pred, X_test)
 
 # %%
 # sanity check with the "stock" model
@@ -424,15 +426,19 @@ y_test_tenth = np.array([round(x, 1) for x in y_test])
 y_pred_tenth = np.array([round(x, 1) for x in y_pred])
 print(f"tenth\t\t{np.sum(y_pred_tenth == y_test_tenth)}\t{round(np.sum(y_pred_tenth == y_test_tenth)*100/len(y_pred_tenth), 1)}%")
 
-# to nearest number
-y_test_whole = np.array([round(x) for x in y_test])
+# dummy predict top two values (integers)
 y_pred_whole = np.array([round(x) for x in y_pred])
-print(f"number\t\t{np.sum(y_test_whole == y_pred_whole)}\t{round(np.sum(y_test_whole == y_pred_whole)*100/len(y_pred_whole),1)}%")
+y_pred_dummy = np.random.randint(3, 5, len(y_test))
+print(f"dummy\t\t{np.sum(y_test_whole == y_pred_dummy)}\t{round(np.sum(y_test_whole == y_pred_dummy)*100/len(y_pred_dummy),1)}%")
 
 # to nearest half
 y_test_half = np.array([round(x * 2) / 2 for x in y_test])
 y_pred_half = np.array([round(x * 2) / 2 for x in y_pred])
 print(f"half\t\t{np.sum(y_test_half == y_pred_half)}\t{round(np.sum(y_test_half == y_pred_half)*100/len(y_pred_half), 1)}%")
+
+# to nearest number
+y_test_whole = np.array([round(x) for x in y_test])
+print(f"number\t\t{np.sum(y_test_whole == y_pred_whole)}\t{round(np.sum(y_test_whole == y_pred_whole)*100/len(y_pred_whole),1)}%")
 
 # %%
 # scores prediction visually
@@ -442,5 +448,3 @@ px.scatter(x=y_test, y=y_pred, range_x=[0,5.1], range_y=[0,5.1], labels={'x':'re
 # %%
 # whole numbers
 px.scatter(x=y_test_whole, y=y_pred_whole, range_x=[0,5.1], range_y=[0,5.1], labels={'x':'real', 'y':'predicted'}).show()
-
-# %%
