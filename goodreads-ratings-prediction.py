@@ -4,12 +4,15 @@ import pandas as pd
 import plotly.express as px
 import plotly.figure_factory as ff
 
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+# from scipy import stats
 from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import RandomForestRegressor,AdaBoostRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, max_error, explained_variance_score
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, PowerTransformer
 from sklearn.tree import DecisionTreeRegressor
 
 INPUT_FILE = "dataset/books.csv"
@@ -323,7 +326,7 @@ def get_scatterplots_wrt_target_for_df(df, target_feature):
         if feature != target_feature and feature in df.select_dtypes(include=[np.number]).columns:
             get_scatterplot_wrt_target(df, target_feature, feature)
 
-# get_scatterplots_wrt_target_for_df(df, "average_rating")
+get_scatterplots_wrt_target_for_df(df, "average_rating")
 
 # %%
 # functions to perform training and scoring in batch
@@ -417,28 +420,30 @@ score_model(stock_rf, y_test, y_pred, X_test)
 
 # %%
 # compare prediction by reducing precision
+def scores_with_varying_precision(y_pred, y_test):
+    # baseline
+    print(f"baseline\t{np.sum(y_pred == y_test)}\t{round(np.sum(y_pred == y_test)*100/len(y_pred), 1)}%")
 
-# baseline
-print(f"baseline\t{np.sum(y_pred == y_test)}\t{round(np.sum(y_pred == y_test)*100/len(y_pred), 1)}%")
+    # to nearest tenth
+    y_test_tenth = np.array([round(x, 1) for x in y_test])
+    y_pred_tenth = np.array([round(x, 1) for x in y_pred])
+    print(f"tenth\t\t{np.sum(y_pred_tenth == y_test_tenth)}\t{round(np.sum(y_pred_tenth == y_test_tenth)*100/len(y_pred_tenth), 1)}%")
 
-# to nearest tenth
-y_test_tenth = np.array([round(x, 1) for x in y_test])
-y_pred_tenth = np.array([round(x, 1) for x in y_pred])
-print(f"tenth\t\t{np.sum(y_pred_tenth == y_test_tenth)}\t{round(np.sum(y_pred_tenth == y_test_tenth)*100/len(y_pred_tenth), 1)}%")
+    # dummy predict top two values (integers)
+    y_test_whole = np.array([round(x) for x in y_test])
+    y_pred_dummy = np.random.randint(3, 5, len(y_test))
+    print(f"dummy\t\t{np.sum(y_test_whole == y_pred_dummy)}\t{round(np.sum(y_test_whole == y_pred_dummy)*100/len(y_pred_dummy),1)}%")
 
-# dummy predict top two values (integers)
-y_pred_whole = np.array([round(x) for x in y_pred])
-y_pred_dummy = np.random.randint(3, 5, len(y_test))
-print(f"dummy\t\t{np.sum(y_test_whole == y_pred_dummy)}\t{round(np.sum(y_test_whole == y_pred_dummy)*100/len(y_pred_dummy),1)}%")
+    # to nearest half
+    y_test_half = np.array([round(x * 2) / 2 for x in y_test])
+    y_pred_half = np.array([round(x * 2) / 2 for x in y_pred])
+    print(f"half\t\t{np.sum(y_test_half == y_pred_half)}\t{round(np.sum(y_test_half == y_pred_half)*100/len(y_pred_half), 1)}%")
 
-# to nearest half
-y_test_half = np.array([round(x * 2) / 2 for x in y_test])
-y_pred_half = np.array([round(x * 2) / 2 for x in y_pred])
-print(f"half\t\t{np.sum(y_test_half == y_pred_half)}\t{round(np.sum(y_test_half == y_pred_half)*100/len(y_pred_half), 1)}%")
+    # to nearest number
+    y_pred_whole = np.array([round(x) for x in y_pred])
+    print(f"number\t\t{np.sum(y_test_whole == y_pred_whole)}\t{round(np.sum(y_test_whole == y_pred_whole)*100/len(y_pred_whole),1)}%")
 
-# to nearest number
-y_test_whole = np.array([round(x) for x in y_test])
-print(f"number\t\t{np.sum(y_test_whole == y_pred_whole)}\t{round(np.sum(y_test_whole == y_pred_whole)*100/len(y_pred_whole),1)}%")
+scores_with_varying_precision(y_pred, y_test)
 
 # %%
 # scores prediction visually
@@ -447,4 +452,62 @@ px.scatter(x=y_test, y=y_pred, range_x=[0,5.1], range_y=[0,5.1], labels={'x':'re
 
 # %%
 # whole numbers
+y_test_whole = np.array([round(x) for x in y_test])
+y_pred_whole = np.array([round(x) for x in y_pred])
 px.scatter(x=y_test_whole, y=y_pred_whole, range_x=[0,5.1], range_y=[0,5.1], labels={'x':'real', 'y':'predicted'}).show()
+
+# %%
+# getting an idea of imabalance between the target values
+print(df.average_rating.value_counts().value_counts())
+
+# %%
+# # Undersampling -> SMOTE
+# undersampler = RandomUnderSampler(sampling_strategy={4:5000}, random_state=42)
+# oversampler = SMOTE(sampling_strategy={2:200, 5:250}, random_state=42)
+
+# y_whole = np.array([round(x) for x in y])
+
+# X_bal, y_bal = undersampler.fit_resample(X, y_whole)
+# X_bal, y_bal = oversampler.fit_resample(X_bal, y_bal)
+
+# # %%
+# # test with stock random forest
+# stock_rf = regressor_list[0]
+# X_train, X_test, y_train, y_test = train_test_split(X_bal, y_bal, test_size=0.2, random_state=42)
+# stock_rf.fit(X_train, y_train)
+# y_pred = stock_rf.predict(X_test)
+# score_model(stock_rf, y_test, y_pred, X_test)
+
+# %%
+# mapping target variable to non-linear functions
+y_sqrt = df.average_rating.map(lambda y: np.sqrt(y))
+y_log_10 = df.average_rating.map(lambda y: np.log10(y))
+y_log_2 = df.average_rating.map(lambda y: np.log2(y))
+y_log_e = df.average_rating.map(lambda y: np.log(y))
+#y_bc, lambda_bc = stats.boxcox(y)
+box_cox_transformer = PowerTransformer(method="box-cox")
+y_bc = box_cox_transformer.fit_transform(df.average_rating.array.reshape(-1, 1)).ravel()
+y_mapped = [y_bc] # [y_sqrt, y_log_10, y_log_2, y_log_e]
+
+# %%
+# test performance
+for y in y_mapped:
+    stock_rf = regressor_list[0]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    stock_rf.fit(X_train, y_train)
+    y_pred = stock_rf.predict(X_test)
+    score_model(stock_rf, y_test, y_pred, X_test)
+    scores_with_varying_precision(y_pred, y_test)
+    px.scatter(x=y_test, y=y_pred, range_x=[min(min(y_test), min(y_pred)),1.1*max(max(y_test), max(y_pred))], range_y=[min(min(y_test), min(y_pred)),1.1*max(max(y_test), max(y_pred))], labels={'x':'real', 'y':'predicted'}).show()
+
+# %%
+# sanity check by running transformation on original datset
+stock_rf = regressor_list[0]
+X_raw = rawDF.drop("average_rating", axis=1).select_dtypes(include=[np.number])
+y_raw_bc = box_cox_transformer.fit_transform(rawDF.average_rating.map(lambda x: 0.01 if x == 0 else x).array.reshape(-1, 1)).ravel()
+X_train, X_test, y_train, y_test = train_test_split(X_raw, y_raw_bc, test_size=0.2, random_state=42)
+stock_rf.fit(X_train, y_train)
+y_pred = stock_rf.predict(X_test)
+score_model(stock_rf, y_test, y_pred, X_test)
+
+# %%

@@ -11,3 +11,4 @@ dependencies:
   - matplotlib=3.5.3
   - plotly=5.9.0
   - statsmodels=0.13.5
+  - imbalanced-learn=0.10.1
