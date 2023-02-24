@@ -298,24 +298,6 @@ df["publisher_PenguinBooks_times_count"] = df["publisher_count"] * df["publisher
 df["publisher_Vintage_times_count"] = df["publisher_Vintage"] * df["publisher_count"]
 
 # %%
-# # remove publisher hot encodes for target correlation <= "other" encode
-# # remove main_author_name_length as it has high correlation to main..._word_count
-# # remove title_word_count because of title_length
-# # remove text_reviews_count because of ratings_count
-# redundant_features = ["text_reviews_count", "title_word_count", "main_author_name_length",
-#     "publisher_BallantineBooks", "publisher_Bantam", "publisher_HarperPerennial",
-#     "publisher_PenguinBooks", "publisher_PocketBooks", "publisher_Vintage"]
-
-# redundant_features = ["ratings_count_times_text_reviews_count", "text_reviews_count",
-#     "text_reviews_count_per_page", "ratings_count_per_page",
-#     "ratings_count_times_text_reviews_count_times_num_pages", "main_author_average_text_reviews_count",
-#     "publication_year_ratings_count", "ratings_count_times_num_pages"]
-
-# df.drop(redundant_features, axis=1, inplace=True)
-# print(df.head())
-# get_correlation_matrix_graph(df.corr()).show()
-
-# %%
 # scatterplots of each feature with average_rating
 def get_scatterplot_wrt_target(df, target_feature, feature):
     test = df[[feature, target_feature]].groupby([feature, target_feature]).value_counts().reset_index(name="count")
